@@ -1,0 +1,29 @@
+#!/bin/bash -p
+[ $# -eq 1 ] || { echo "$0 requires exactly 1 arg" 1>&2;exit 1; }
+#set -x
+CHROOT=$1
+
+# Stop addchroot from running doinst on early packages
+export SLACKPATH=NONE
+
+addchroot $CHROOT aaa_elflibs
+[ $(uname -m) = x86_64 ] && LIBDIRSUFFIX="64" || LIBDIRSUFFIX=""
+mkdir -p  $CHROOT/etc
+echo /lib$LIBDIRSUFFIX  >$CHROOT/etc/ld.so.conf
+echo /usr/lib$LIBDIRSUFFIX >>$CHROOT/etc/ld.so.conf
+
+# Special treatment of glibc{,-solibs}
+[ -n "$MKCHROOT_FOR_GCC" ] && PKG=glibc || PKG=glibc-solibs
+addchroot $CHROOT $PKG
+chroot $CHROOT /sbin/ldconfig
+
+# We also need bash in order to run doinst.
+addchroot $CHROOT bash
+echo /bin/bash >$CHROOT/etc/shells
+chmod 644 $CHROOT/etc/shells
+
+# install programs that doinst frequently uses
+addchroot $CHROOT coreutils grep
+
+# Install a usable /dev (for /dev/null especially)
+addchroot $CHROOT devs

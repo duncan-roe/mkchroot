@@ -1,0 +1,125 @@
+#!/bin/bash -p
+[ $# -ge 2 ] || { echo "$0 requires at least 2 args" 1>&2;exit 1; }
+#set -x
+CHROOT=$1
+[ -n "$MKCHROOT_IGNORE_LN_ERRORS" ] && LNE='2>/dev/null' || LNE=
+unset T
+i=$(uname -m)
+case $i in
+x86_64)
+  ARCH="$i|x86"
+  ;;
+i686)
+  ARCH="$i|i586|i486|x86"
+  ;;
+i586)
+  ARCH="$i|i486|x86"
+  ;;
+i486)
+  ARCH="$i|x86"
+  ;;
+*)
+  ARCH="$i"
+  ;;
+esac
+
+# The only reason to install man pages is to keep doinst.sh happy.
+# So don't install them if doinst.sh is unavailable
+SLACKPATH=$(findslack)
+[ $SLACKPATH = NONE ] && j='|man' || j=
+
+while [ $# -gt 1 ]
+do
+  shift
+  PKG=$1
+  P=$(ls /var/log/packages/$PKG* |
+    grep -E "$PKG-[rv]{0,1}[0-9][^-]*-($ARCH|noarch)")
+  [ -f "$P" ] || { echo "$PKG finds only $P" >&2; exit 1; }
+  [ -z "$VERBOSE_ADDCHROOT" ] || echo "Adding $PKG" >&2
+
+  # Check for specials
+  if [ $PKG = glibc -o $PKG = glibc-solibs -o $PKG = bash -o $PKG = devs ]
+  then
+    export SLACKPATH=NONE
+    T=$(tempfile -s .mkchroot)
+    if [ "$PKG" = bash ]
+    then
+      # Install bash manually and only use the main script to do locale stuff
+      mkdir -p $CHROOT/bin
+      (cd $CHROOT/bin
+        eval ln -f /bin/bash $LNE \|\| cp -a /bin/bash .
+        ln -sf bash sh)
+      echo "FILE LIST" >$T
+      echo >>$T
+      cat $P|grep -E ^usr/share >>$T
+      echo usr/bin/bash >>$T   # symlink
+    fi
+    if [ "${PKG:0:5}" = glibc ]
+    then
+      cat $P | sed -e 's+/incoming/+/+' >$T
+    fi
+    if [ "$PKG" = devs ]
+    then
+      # Only install those entries that exist in /dev, and do it here
+      # (because /dev is always mounted, so hard linking fails)
+      cat $P | grep -E ^dev/ |
+        while read i
+        do
+          if [ -e /$i ]
+          then
+            if [ -d /$i ]
+            then
+              mkdir -p $CHROOT/$i
+            else
+              cp -a /$i $CHROOT/$i
+            fi
+          fi
+        done
+      rm $T
+      unset T
+      continue
+    fi
+    P=$T
+  fi
+
+  tail -n +$(($(grep -n "^FILE LIST" $P | cut -f1 -d:) + 2)) $P |
+    grep -E -v "^(install|usr/(doc|info$j))" | sed -e 's/[.]new$//' |
+    while read i
+  do
+    if [ -d /$i ]
+    then
+      mkdir -p $CHROOT/$i
+    else
+      eval ln -f /$i $CHROOT/$i $LNE \|\| cp -a /$i $CHROOT/$i
+    fi
+  done
+
+  # Apply doinst.sh if possible
+  if [ $SLACKPATH != NONE ]
+  then
+    # Ensure tar file exists (it won't, for e.g. SBo packages)
+    TF=$(find $SLACKPATH -name $(basename $P).txz)
+    if [ -z "$TF" ]
+    then
+      # Try the SBo package path, if it's valid
+      SBO_PATH=${SBO_PATH:-/usr/packages}
+      if [ -d "$SBO_PATH" ]
+      then
+        TF=$(find $SBO_PATH -name $(basename $P).tgz)
+      fi
+    fi
+
+    if [ -n "$TF" ]
+    then
+      mkdir -p $CHROOT/install
+      tar Oxf $TF install/doinst.sh | grep -E -v '^[[:space:]]*config [^()]' |
+        sed -e s/[.]new// >$CHROOT/install/doinst.sh
+      [ -s $CHROOT/install/doinst.sh ] &&
+        chroot $CHROOT /bin/sh /install/doinst.sh
+      rm -r  $CHROOT/install
+    fi
+  fi
+
+  # Remove temporary file if one created
+  [ -z "$T" ] || { rm -f $T; unset T; }
+done
