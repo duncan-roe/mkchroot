@@ -23,11 +23,6 @@ i486)
   ;;
 esac
 
-# The only reason to install man pages is to keep doinst.sh happy.
-# So don't install them if doinst.sh is unavailable
-SLACKPATH=$(findslack)
-[ $SLACKPATH = NONE ] && j='|man' || j=
-
 while [ $# -gt 1 ]
 do
   shift
@@ -35,12 +30,20 @@ do
   P=$(ls /var/log/packages/$PKG* |
     grep -E "$PKG-[rv]{0,1}[0-9][^-]*-($ARCH|noarch)")
   [ -f "$P" ] || { echo "$PKG finds only $P" >&2; exit 1; }
+
+  # Get (formerly) doinst.sh name
+  S=$(echo $P | sed 's+/packages/+/scripts/+')
+
+  # The only reason to install man pages is to keep doinst.sh happy.
+  # So don't install them if doinst.sh is unavailable
+  [ -r $S ] && j= || j='|man'
+
   [ -z "$VERBOSE_ADDCHROOT" ] || echo "Adding $PKG" >&2
 
   # Check for specials
   if [ $PKG = glibc -o $PKG = glibc-solibs -o $PKG = bash -o $PKG = devs ]
   then
-    export SLACKPATH=NONE
+    S=/dev/null
     T=$(tempfile -s .mkchroot)
     if [ "$PKG" = bash ]
     then
@@ -95,29 +98,13 @@ do
   done
 
   # Apply doinst.sh if possible
-  if [ $SLACKPATH != NONE ]
+  if [ -s $S ]
   then
-    # Ensure tar file exists (it won't, for e.g. SBo packages)
-    TF=$(find $SLACKPATH -name $(basename $P).txz)
-    if [ -z "$TF" ]
-    then
-      # Try the SBo package path, if it's valid
-      SBO_PATH=${SBO_PATH:-/usr/packages}
-      if [ -d "$SBO_PATH" ]
-      then
-        TF=$(find $SBO_PATH -name $(basename $P).tgz)
-      fi
-    fi
-
-    if [ -n "$TF" ]
-    then
-      mkdir -p $CHROOT/install
-      tar Oxf $TF install/doinst.sh | grep -E -v '^[[:space:]]*config [^()]' |
-        sed -e s/[.]new// >$CHROOT/install/doinst.sh
-      [ -s $CHROOT/install/doinst.sh ] &&
-        chroot $CHROOT /bin/sh /install/doinst.sh
-      rm -r  $CHROOT/install
-    fi
+    mkdir -p $CHROOT/install
+    cat $S | grep -E -v '^[[:space:]]*config [^()]' |
+      sed -e s/[.]new// >$CHROOT/install/doinst.sh
+    (cd $CHROOT;sh install/doinst.sh)
+    rm -r  $CHROOT/install
   fi
 
   # Remove temporary file if one created

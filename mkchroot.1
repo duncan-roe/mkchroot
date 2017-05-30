@@ -19,16 +19,14 @@
 .\" the Free Software Foundation, 59 Temple Place - Suite 330,
 .\" Boston, MA 02111-1307, USA.
 .\"
-.TH MKCHROOT 1 "Mar 14 2017" "Misc commands" "Linux Programmer's Manual"
+.TH MKCHROOT 1 "May 30 2017" "Misc commands" "Linux Programmer's Manual"
 .SH NAME
-mkchroot, addchroot, findslack \- Create chroot-able tree using hard links where
+mkchroot, addchroot \- Create chroot-able tree using hard links where
 possible
 .SH SYNOPSIS
 \f3mkchroot\f1 \f2directory\f1
 .br
 \f3addchroot\f1 \f2directory\f1 \f2package\f1 [...]
-.br
-\f3findslack\f1
 .SH DESCRIPTION
 \f3mkchroot\f1 creates a file structure under (possibly new) \f2directory\f1
 such that
@@ -64,27 +62,12 @@ See \f2MKCHROOT_IGNORE_LN_ERRORS\f1 below.
 .PP
 \f3addchroot\f1 installs \f2package\f1 to \f2directory\f1
 by hard linking or copying the files in the package.
-Unless \f2SLACKPATH\f1 is \f3NONE\f1,
-\f3addchroot\f1 also \f3tries\f1 to chroot the install script for \f2package\f1.
-\f3addchroot\f1 gets the install script from the package tar archive that was
-installed originally, providing it can be found inside
-\f2SLACKPATH\f1 or \f2SBO_PATH\f1 (see \f3ENVIRONMENT VARIABLES\f1 below).
-.PP
-\f3findslack\f1 outputs the path of the Slackware install directory for the
-current architecture, or \f3NONE\f1 if it cannot detect the path.
 .br
-If \f2SLACKPATH\f1 is not in the environment,
-\f3findslack\f1 searches the output from \f3mount\f1
-for a Slackware install iso named
-\f3slackware\f2ARCHSUFFIX\f3-\f2SLACKREV\f3-install-dvd.iso\f1,
-where \f2ARCHSUFFIX\f1 is nothing or "64" depending on the output from
-\f3uname -m\f1;
-and \f2SLACKREV\f1 is set from \f3/etc/slackware-version\f1.
-.br
-For more about \f2SLACKPATH\f1, see \f3ENVIRONMENT VARIABLES\f1 below.
+\f3addchroot\f1 also runs the install script for \f2package\f1,
+if it exists in \f4/var/log/scripts\f1.
 .SH ENVIRONMENT VARIABLES
 Environment variables manage the detailed operation of the \f3addchroot\f1
-ommand family.
+command family.
 .PP
 \f2MKCHROOT_FOR_GCC\f1
 .RS 3
@@ -103,29 +86,6 @@ linking.
 .br
 There will be a large number of these errors if \f2directory\f1
 is not in the same file system as that in which the packages are installed.
-.RE
-.PP
-\f2SLACKPATH\f1
-.RS 3
-If already set, \f3findslack\f1 will simply output \f2SLACKPATH\f1
-as its result.
-Unless the install iso of the correct name is mounted, \f2SLACKPATH\f1
-should contain the path of the slackware install directory
-(containing subdirectories a, ap, d, e, f &c.).
-.br
-\f3export SLACKPATH=NONE\f1 to inhibit running the install script for a package.
-(Both \f3mkchroot\f1 and \f3addchroot\f1 may do this).
-.RE
-.PP
-\f2SBO_PATH\f1
-.RS 3
-Set this to the path where you keep
-packages that are not part of standard Slackware
-(e.g. SBo or alien packages).
-.br
-If  \f2SLACKPATH\f1 is not set to \f3NONE\f1,
-and \f3findslack\f1 cannot find \f2package\f1 in \f2SLACKPATH\f1,
-it will look for it here.
 .RE
 .PP
 \f2VERBOSE_ADDCHROOT\f1

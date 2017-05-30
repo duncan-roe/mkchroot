@@ -3,9 +3,6 @@
 #set -x
 CHROOT=$1
 
-# Stop addchroot from running doinst on early packages
-export SLACKPATH=NONE
-
 addchroot $CHROOT aaa_elflibs
 [ $(uname -m) = x86_64 ] && LIBDIRSUFFIX="64" || LIBDIRSUFFIX=""
 mkdir -p  $CHROOT/etc
