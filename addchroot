@@ -3,7 +3,8 @@
 #set -x
 CHROOT=$1
 [ -n "$MKCHROOT_IGNORE_LN_ERRORS" ] && LNE='2>/dev/null' || LNE=
-unset T
+unset T      # Temp file list
+U=/dev/null  # Temp install script
 i=$(uname -m)
 case $i in
 x86_64)
@@ -41,8 +42,15 @@ do
   [ -z "$VERBOSE_ADDCHROOT" ] || echo "Adding $PKG" >&2
 
   # Check for specials
-  if [ $PKG = glibc -o $PKG = glibc-solibs -o $PKG = bash -o $PKG = devs ]
+  if [ \
+    $PKG = glibc \
+    -o $PKG = glibc-solibs \
+    -o $PKG = bash \
+    -o $PKG = devs \
+    -o $PKG = sysvinit \
+    ]
   then
+    R=$S
     S=/dev/null
     T=$(tempfile -s .mkchroot)
     if [ "$PKG" = bash ]
@@ -82,6 +90,12 @@ do
       unset T
       continue
     fi
+    if [ "$PKG" = sysvinit ]
+    then
+      cat $P > $T
+      U=$(tempfile -s .mkchroot)
+      cat $R|grep -E '^[(]' > $U
+    fi
     P=$T
   fi
 
@@ -105,6 +119,11 @@ do
       sed -e s/[.]new// >$CHROOT/install/doinst.sh
     (cd $CHROOT;sh install/doinst.sh)
     rm -r  $CHROOT/install
+  elif [ -s $U ]
+  then
+    (cd $CHROOT;sh $U)
+    rm $U
+    U=/dev/null
   fi
 
   # Remove temporary file if one created
