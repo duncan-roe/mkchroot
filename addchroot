@@ -103,7 +103,7 @@ do
     grep -E -v "^(install|usr/(doc|info$j))" | sed -e 's/[.]new$//' |
     while read i
   do
-    if [ -d /$i ]
+    if [ -d /$i -a ! -L $i ]
     then
       mkdir -p $CHROOT/$i
     else
