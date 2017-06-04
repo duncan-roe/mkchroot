@@ -48,6 +48,7 @@ do
     -o $PKG = bash \
     -o $PKG = devs \
     -o $PKG = etc \
+    -o $PKG = network-scripts \
     -o $PKG = sysvinit \
     ]
   then
@@ -92,7 +93,7 @@ do
       unset T
       continue
     fi
-    if [ "$PKG" = etc ]
+    if [ "$PKG" = etc -o "$PKG" = network-scripts ]
     then
       # Don't want to run doinst.sh
       cat $P > $T
