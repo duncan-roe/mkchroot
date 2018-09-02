@@ -124,7 +124,7 @@ do
   if [ -s $S ]
   then
     mkdir -p $CHROOT/install
-    cat $S | grep -E -v '^[[:space:]]*config [^()]' |
+    cat $S | grep -E -v -e '^[[:space:]]*config [^()]' -e usr/doc |
       sed -e s/[.]new// >$CHROOT/install/doinst.sh
     (cd $CHROOT;sh install/doinst.sh)
     rm -r  $CHROOT/install
