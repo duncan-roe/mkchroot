@@ -29,7 +29,7 @@ do
   shift
   PKG=$1
   P=$(ls /var/log/packages/$PKG* |
-    grep -E "$PKG-[rv]{0,1}[0-9][^-]*-($ARCH|noarch)")
+    grep -E "$PKG-[rv]{0,1}[0-9][^-]*-([^-]*-){0,1}($ARCH|noarch)")
   [ -f "$P" ] || { echo "$PKG finds only $P" >&2; exit 1; }
 
   # Get (formerly) doinst.sh name
@@ -44,7 +44,7 @@ do
   # Check for specials
   if [ \
     $PKG = glibc \
-    -o $PKG = glibc-solibs \
+    -o $PKG = aaa_glibc-solibs \
     -o $PKG = bash \
     -o $PKG = devs \
     -o $PKG = etc \
@@ -67,7 +67,7 @@ do
       cat $P|grep -E ^usr/share >>$T
       echo usr/bin/bash >>$T   # symlink
     fi
-    if [ "${PKG:0:5}" = glibc ]
+    if [ $PKG = glibc -o $PKG = aaa_glibc-solibs ]
     then
       # Remove incoming/ prefix in file list
       cat $P | sed -e 's+/incoming/+/+' >$T
@@ -126,6 +126,12 @@ do
     mkdir -p $CHROOT/install
     cat $S | grep -E -v -e '^[[:space:]]*config [^()]' -e usr/doc |
       sed -e s/[.]new// >$CHROOT/install/doinst.sh
+    # util-linux ends up with an empty if - thanks, PAM
+    if [ $PKG = util-linux ]
+    then
+      sed -i '/^for configfile in/,/^$/{D}' $CHROOT/install/doinst.sh
+      sed -i '/^if \[ -r etc/,/^fi$/{D}' $CHROOT/install/doinst.sh
+    fi
     (cd $CHROOT;sh install/doinst.sh)
     rm -r  $CHROOT/install
   elif [ -s $U ]

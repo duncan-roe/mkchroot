@@ -3,14 +3,14 @@
 #set -x
 CHROOT=$1
 
-addchroot $CHROOT aaa_elflibs
+addchroot $CHROOT aaa_libraries
 [ $(uname -m) = x86_64 ] && LIBDIRSUFFIX="64" || LIBDIRSUFFIX=""
 mkdir -p  $CHROOT/etc
 echo /lib$LIBDIRSUFFIX  >$CHROOT/etc/ld.so.conf
 echo /usr/lib$LIBDIRSUFFIX >>$CHROOT/etc/ld.so.conf
 
 # Special treatment of glibc{,-solibs}
-[ -n "$MKCHROOT_FOR_GCC" ] && PKG=glibc || PKG=glibc-solibs
+[ -n "$MKCHROOT_FOR_GCC" ] && PKG=glibc || PKG=aaa_glibc-solibs
 addchroot $CHROOT $PKG
 chroot $CHROOT /sbin/ldconfig
 
