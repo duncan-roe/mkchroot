@@ -2,15 +2,18 @@
 [ $# -eq 1 ] || { echo "$0 requires exactly 1 arg" 1>&2;exit 1; }
 #set -x
 CHROOT=$1
+SLK_VERSION=$(cat /etc/slackware-version|cut -d' ' -f2)
+[ $SLK_VERSION = 14.2 ] && ELFLIBS=aaa_elflibs || ELFLIBS=aaa_libraries
+[ $SLK_VERSION = 14.2 ] && SOLIBS=glibc-solibs || SOLIBS=aaa_glibc-solibs
 
-addchroot $CHROOT aaa_libraries
+addchroot $CHROOT $ELFLIBS
 [ $(uname -m) = x86_64 ] && LIBDIRSUFFIX="64" || LIBDIRSUFFIX=""
 mkdir -p  $CHROOT/etc
 echo /lib$LIBDIRSUFFIX  >$CHROOT/etc/ld.so.conf
 echo /usr/lib$LIBDIRSUFFIX >>$CHROOT/etc/ld.so.conf
 
 # Special treatment of glibc{,-solibs}
-[ -n "$MKCHROOT_FOR_GCC" ] && PKG=glibc || PKG=aaa_glibc-solibs
+[ -n "$MKCHROOT_FOR_GCC" ] && PKG=glibc || PKG=$SOLIBS
 addchroot $CHROOT $PKG
 chroot $CHROOT /sbin/ldconfig
 

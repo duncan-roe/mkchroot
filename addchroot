@@ -2,6 +2,8 @@
 [ $# -ge 2 ] || { echo "$0 requires at least 2 args" 1>&2;exit 1; }
 #set -x
 CHROOT=$1
+SLK_VERSION=$(cat /etc/slackware-version|cut -d' ' -f2)
+[ $SLK_VERSION = 14.2 ] && SOLIBS=glibc-solibs || SOLIBS=aaa_glibc-solibs
 [ -n "$MKCHROOT_IGNORE_LN_ERRORS" ] && LNE='2>/dev/null' || LNE=
 unset T      # Temp file list
 U=/dev/null  # Temp install script
@@ -44,7 +46,7 @@ do
   # Check for specials
   if [ \
     $PKG = glibc \
-    -o $PKG = aaa_glibc-solibs \
+    -o $PKG = $SOLIBS \
     -o $PKG = bash \
     -o $PKG = devs \
     -o $PKG = etc \
@@ -67,7 +69,7 @@ do
       cat $P|grep -E ^usr/share >>$T
       echo usr/bin/bash >>$T   # symlink
     fi
-    if [ $PKG = glibc -o $PKG = aaa_glibc-solibs ]
+    if [ $PKG = glibc -o $PKG = $SOLIBS ]
     then
       # Remove incoming/ prefix in file list
       cat $P | sed -e 's+/incoming/+/+' >$T
@@ -126,12 +128,15 @@ do
     mkdir -p $CHROOT/install
     cat $S | grep -E -v -e '^[[:space:]]*config [^()]' -e usr/doc |
       sed -e s/[.]new// >$CHROOT/install/doinst.sh
-    # util-linux ends up with an empty if - thanks, PAM
-    if [ $PKG = util-linux ]
-    then
-      sed -i '/^for configfile in/,/^$/{D}' $CHROOT/install/doinst.sh
-      sed -i '/^if \[ -r etc/,/^fi$/{D}' $CHROOT/install/doinst.sh
-    fi
+    [ $SLK_VERSION = 14.2 ] ||
+    {
+      # util-linux ends up with an empty if (thanks to PAM)
+      if [ $PKG = util-linux ]
+      then
+        sed -i '/^for configfile in/,/^$/{D}' $CHROOT/install/doinst.sh
+        sed -i '/^if \[ -r etc/,/^fi$/{D}' $CHROOT/install/doinst.sh
+      fi
+    }
     (cd $CHROOT;sh install/doinst.sh)
     rm -r  $CHROOT/install
   elif [ -s $U ]
