@@ -118,7 +118,7 @@ do
     then
       mkdir -p $CHROOT/$i
     else
-      eval ln -f /$i $CHROOT/$i $LNE \|\| cp -a /$i $CHROOT/$i
+      eval ln -f \"/$i\" \"$CHROOT/$i\" $LNE \|\| cp -a \"/$i\" \"$CHROOT/$i\"
     fi
   done
 
