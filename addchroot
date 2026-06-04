@@ -30,7 +30,7 @@ while [ $# -gt 1 ]
 do
   shift
   PKG=$1
-  P=$(ls /var/log/packages/$PKG* |
+  P=$(ls /var/log/packages/$PKG* |  head -n1 |
     grep -E "$PKG-[rv]{0,1}[0-9][^-]*-([^-]*-){0,1}($ARCH|noarch)")
   [ -f "$P" ] || { echo "$PKG finds only $P" >&2; exit 1; }
 
