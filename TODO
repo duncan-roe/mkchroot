@@ -1,0 +1,1 @@
+Use compgen -f instead of ls|head
